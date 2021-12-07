@@ -15,6 +15,7 @@ import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.FileProvider
+import com.google.android.material.snackbar.Snackbar
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -40,7 +41,6 @@ class MainActivity : AppCompatActivity() {
             ActivityResultContracts.StartActivityForResult()) { result ->
 
             if (result?.resultCode == Activity.RESULT_OK) {
-                Log.d(TAG,"inin")
                 val selectedImageUri : Uri
                 if(cameraPhotoFilePath != null){
                     selectedImageUri = cameraPhotoFilePath ?: return@registerForActivityResult
@@ -48,7 +48,6 @@ class MainActivity : AppCompatActivity() {
                     selectedImageUri= result.data?.data ?: return@registerForActivityResult
                 }
                 cameraPhotoFilePath = null
-                Log.d(TAG,"inin")
 
                 val encodedImageStr = imageConverter.encodeBase64(selectedImageUri) ?: return@registerForActivityResult
                 val imageByteArray = imageConverter.stringToByteArray(encodedImageStr)
@@ -117,7 +116,7 @@ class MainActivity : AppCompatActivity() {
                     Log.d(TAG,"external read permission is granted")
                 }else{
                     Log.d(TAG,"external read permission is denied")
-                    finish()
+                    Toast.makeText(applicationContext,"권한이 거부되어있습니다.\n(설정>애플리케이션>AngelNet>권한>저장공간>허용)", Toast.LENGTH_LONG).show()
                 }
             }
         }
