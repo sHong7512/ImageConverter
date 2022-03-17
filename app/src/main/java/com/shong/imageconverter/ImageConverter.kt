@@ -21,13 +21,13 @@ class ImageConverter constructor(val context: Context) {
         val matrix = context.contentResolver.openInputStream(uri)?.run {
             getRotateMatrix(this)
         } ?: Matrix()
-        val img = context.contentResolver.openInputStream(uri)?.run {
+        val bitmap = context.contentResolver.openInputStream(uri)?.run {
             fixRotate(this, matrix)
         } ?: return null
-//        val img = fixRotate(context.contentResolver.openInputStream(uri), matrix)
+//        val bitmap = fixRotate(context.contentResolver.openInputStream(uri), matrix)
 
         val byteArrayOutputStream = ByteArrayOutputStream()
-        img.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream)
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream)
 
         val byteArray: ByteArray?
         val ratio = byteArrayOutputStream.size().toFloat() / MAX_IMAGE_SIZE
@@ -36,7 +36,7 @@ class ImageConverter constructor(val context: Context) {
             val quality = (100f / ratio).toInt()
 
             val byteArrayOutputStream2 = ByteArrayOutputStream()
-            img.compress(Bitmap.CompressFormat.JPEG, quality, byteArrayOutputStream2)
+            bitmap.compress(Bitmap.CompressFormat.JPEG, quality, byteArrayOutputStream2)
             Log.d(TAG,"quality : $quality trans size : ${byteArrayOutputStream2.size()}")
 
             if(byteArrayOutputStream2.size() > MAX_IMAGE_SIZE){
