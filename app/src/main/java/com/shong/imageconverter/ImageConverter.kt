@@ -2,7 +2,6 @@ package com.shong.imageconverter
 
 import android.app.Activity
 import android.content.ContentValues
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -21,45 +20,94 @@ import androidx.core.app.ActivityCompat
 import java.io.*
 
 class ImageConverter constructor(val activity: Activity) {
-    private val TAG = this::class.java.simpleName
+    private val TAG = this::class.java.simpleName + "_sHong"
     private val MAX_IMAGE_SIZE = 1024 * 1024 * 2
 
-    internal var jpegImageSize : Double = 0.0
+    val MAX_WIDTH = 4096f      //320f
+    val MAX_HEIGHT = 4096f     //240f
+
     internal fun encodeBase64(uri: Uri) : String?{
         val matrix = activity.contentResolver.openInputStream(uri)?.run {
             getRotateMatrix(this)
         } ?: Matrix()
-        val bitmap = activity.contentResolver.openInputStream(uri)?.run {
+        var bitmap = activity.contentResolver.openInputStream(uri)?.run {
             fixRotate(this, matrix)
         } ?: return null
 //        val bitmap = fixRotate(context.contentResolver.openInputStream(uri), matrix)
 
-        val byteArrayOutputStream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream)
+        Log.d(TAG, "resolution -> width: ${bitmap.width} height: ${bitmap.height}")
 
-        val byteArray: ByteArray?
-        val ratio = byteArrayOutputStream.size().toFloat() / MAX_IMAGE_SIZE
-        //퀄리티 조절로 용량 조절
-        if(ratio > 1){
-            val quality = (100f / ratio).toInt()
-
-            val byteArrayOutputStream2 = ByteArrayOutputStream()
-            bitmap.compress(Bitmap.CompressFormat.JPEG, quality, byteArrayOutputStream2)
-            Log.d(TAG,"quality : $quality trans size : ${byteArrayOutputStream2.size()}")
-
-            if(byteArrayOutputStream2.size() > MAX_IMAGE_SIZE){
-                Log.d(TAG,"변환값이 max를 초과")
-                return null
+        val w = bitmap.width.toFloat()
+        val h = bitmap.height.toFloat()
+        if(w > MAX_WIDTH || h > MAX_HEIGHT){
+            try{
+                bitmap = if (w / h > MAX_WIDTH / MAX_HEIGHT) Bitmap.createScaledBitmap(
+                    bitmap,
+                    MAX_WIDTH.toInt(),
+                    (MAX_WIDTH / w * h).toInt(),
+                    true
+                ) else Bitmap.createScaledBitmap(
+                    bitmap,
+                    (MAX_HEIGHT / h * w).toInt(),
+                    MAX_HEIGHT.toInt(),
+                    true
+                )
+            }catch (e: Exception){
+                try{
+                    bitmap = if (w / h > MAX_WIDTH / MAX_HEIGHT) Bitmap.createScaledBitmap(
+                        bitmap,
+                        MAX_WIDTH.toInt(),
+                        (MAX_WIDTH / w * h).toInt(),
+                        false
+                    ) else Bitmap.createScaledBitmap(
+                        bitmap,
+                        (MAX_HEIGHT / h * w).toInt(),
+                        MAX_HEIGHT.toInt(),
+                        false
+                    )
+                }catch (e: Exception){
+                    Log.d(TAG,"이미지가 크기가 너무 큽니다.")
+                    return null
+                }
             }
-
-            jpegImageSize = byteArrayOutputStream2.size().toDouble()
-            byteArray = byteArrayOutputStream2.toByteArray()
-        }else{
-            jpegImageSize = byteArrayOutputStream.size().toDouble()
-            byteArray = byteArrayOutputStream.toByteArray()
+            Log.d(TAG, "resized resolution -> width: ${bitmap.width} height: ${bitmap.height}")
         }
 
+        val byteArrayOutputStream = ByteArrayOutputStream()
+
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream)
+        Log.d(TAG, "resized size: ${byteArrayOutputStream.toByteArray().size / 1024f}kb")
+
+        val byteArray: ByteArray?
+        //퀄리티 조절로 용량 조절
+        if(byteArrayOutputStream.toByteArray().size > MAX_IMAGE_SIZE){
+//            val quality = MAX_IMAGE_SIZE.toFloat() / byteArrayOutputStream.toByteArray().size * 100
+//            val byteArrayOutputStream2 = ByteArrayOutputStream()
+//            bitmap.compress(Bitmap.CompressFormat.JPEG, quality.toInt(), byteArrayOutputStream2)
+//            byteArray = byteArrayOutputStream2.toByteArray()
+            byteArray = qualityRecursive(bitmap, byteArrayOutputStream).toByteArray()
+        }else{
+            byteArray = byteArrayOutputStream.toByteArray()
+        }
+        Log.d(TAG, "final size: ${byteArray.size / 1024f}kb")
+
         return Base64.encodeToString(byteArray, Base64.DEFAULT)
+    }
+
+    var quality = 100
+    // quality 최대 사용을 위한 재귀함수
+    fun qualityRecursive(bitmap: Bitmap, byteArrayOutputStream: ByteArrayOutputStream): ByteArrayOutputStream{
+        val byteArrayOutputStream2 = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, quality, byteArrayOutputStream2)
+        Log.d(TAG,"down quility size: ${byteArrayOutputStream2.toByteArray().size / 1024f} quality $quality")
+
+        if(byteArrayOutputStream2.toByteArray().size > MAX_IMAGE_SIZE){
+            quality -= 1
+            return qualityRecursive(bitmap, byteArrayOutputStream)
+        }else{
+            quality = 100
+            return byteArrayOutputStream2
+        }
     }
 
     internal fun decodeBase64(dataStr: String) : Bitmap {
