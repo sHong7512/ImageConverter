@@ -13,6 +13,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.Base64
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
@@ -22,7 +23,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.FileProvider
 import java.io.*
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+
 
 /**
  *
@@ -157,6 +159,9 @@ class ImageConverter(private val activity: ComponentActivity) {
 
             return fixRotate(ByteArrayInputStream(byteArray), matrix)
         }
+
+        fun byteArrayEncodeBase64(byteArray: ByteArray): ByteArray = Base64.encode(byteArray, Base64.DEFAULT)
+        fun byteArrayDecodeBase64(byteArray: ByteArray): ByteArray = Base64.decode(byteArray, Base64.DEFAULT)
 
         //이미지 자동회전 방지 (sdk 24이상부터)
         private fun fixRotate(ins: InputStream, matrix: Matrix): Bitmap {
@@ -297,10 +302,6 @@ class ImageConverter(private val activity: ComponentActivity) {
         fun onError(msg: String)
     }
 
-    init {
-        initialize()
-    }
-
     private var onUriListener: OnUriListener? = null
     fun setOnUriListener(l: OnUriListener?) {
         onUriListener = l
@@ -310,7 +311,7 @@ class ImageConverter(private val activity: ComponentActivity) {
     private lateinit var cameraResultLauncher: ActivityResultLauncher<Intent>
     private lateinit var albumResultLauncher: ActivityResultLauncher<Intent>
 
-    private fun initialize() {
+    fun initialize() {
         cameraResultLauncher = activity.registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
         ) { result ->

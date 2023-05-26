@@ -17,7 +17,10 @@ class MainActivity : AppCompatActivity() {
 //        val imageByteArray = ImageConverter.convertToJpgByteArray(this, uri)
 //        val bitmap = ImageConverter.byteArrayToBitmap(imageByteArray ?: byteArrayOf())
 
-        val imageConverter = ImageConverter(this)
+        val imageConverter = ImageConverter(this).apply {
+            initialize()
+        }
+
         imageConverter.setOnUriListener(object : ImageConverter.OnUriListener {
             override fun onUri(uri: Uri) {
                 findViewById<ImageView>(R.id.imageView).setImageURI(uri)
