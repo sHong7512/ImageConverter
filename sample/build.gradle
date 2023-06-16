@@ -45,5 +45,5 @@ dependencies {
     implementation project(path: ':ImageConverter')
 
     // Klog
-    implementation 'com.github.sHong7512:Klog:0.0.1'
+    implementation 'com.github.sHong7512:Klog:0.0.3'
 }
