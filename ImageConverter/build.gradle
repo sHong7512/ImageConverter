@@ -9,7 +9,7 @@ publishing {
         release(MavenPublication) {
             groupId = 'com.github.sHong'
             artifactId = 'ImageConverter'
-            version = '0.0.0'
+            version = '0.0.1'
 
             afterEvaluate {
                 from components.release
@@ -19,7 +19,7 @@ publishing {
         debug(MavenPublication) {
             groupId = 'com.github.sHong'
             artifactId = 'ImageConverter'
-            version = '0.0.0'
+            version = '0.0.1'
 
             afterEvaluate {
                 from components.debug

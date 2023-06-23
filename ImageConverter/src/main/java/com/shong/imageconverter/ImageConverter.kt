@@ -43,9 +43,17 @@ import java.util.Date
  */
 class ImageConverter(private val activity: ComponentActivity) {
     companion object {
-        private const val dirPath = "DCIM/imgConv"
-        private const val lastName = "_imgConv"
-        private const val tag = "ImageConverter"
+        private var dirPath = "DCIM/imgConv"
+        private var lastName = "_imgConv"
+        private const val TAG = "ImageConverter"
+
+        fun setDirectoryPath(dirPath: String){
+            this.dirPath = dirPath
+        }
+
+        fun setLastName(lastName: String){
+            this.lastName = lastName
+        }
 
         //이미지 JPEG변환 및 최대 해상도, 최대 용량 지정
         fun convertToJpgByteArray(
@@ -67,7 +75,7 @@ class ImageConverter(private val activity: ComponentActivity) {
             }
             val byteArrayOutputStream = ByteArrayOutputStream()
             Log.d(
-                tag,
+                TAG,
                 "current resolution: ${bitmap.width} ${bitmap.height} capacity: ${byteArrayOutputStream.toByteArray().size}"
             )
 
@@ -106,17 +114,17 @@ class ImageConverter(private val activity: ComponentActivity) {
                                 false
                             )
                         } catch (e: Exception) {
-                            Log.e(tag, "resized resolution Error! $e")
+                            Log.e(TAG, "resized resolution Error! $e")
                             return null
                         }
                     }
-                    Log.d(tag, "resized resolution")
+                    Log.d(TAG, "resized resolution")
                 }
             }
 
             // JPEG convert
             bitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream)
-            Log.d(tag, "convert with JPEG complete")
+            Log.d(TAG, "convert with JPEG complete")
 
             // Capacity size convert
             val byteArray: ByteArray? =
@@ -126,7 +134,7 @@ class ImageConverter(private val activity: ComponentActivity) {
                     byteArrayOutputStream.toByteArray()
                 }
             Log.d(
-                tag,
+                TAG,
                 "final resolution: ${bitmap.width} ${bitmap.height} capacity: ${byteArrayOutputStream.toByteArray().size}"
             )
 
@@ -148,7 +156,7 @@ class ImageConverter(private val activity: ComponentActivity) {
             return if (byteArrayOutputStream2.toByteArray().size > maxCapacity) {
                 qualityRecursive(bitmap, byteArrayOutputStream, quality - 1, maxCapacity)
             } else {
-                Log.d(tag, "final quality : $quality ")
+                Log.d(TAG, "final quality : $quality ")
                 byteArrayOutputStream2
             }
         }
@@ -188,7 +196,7 @@ class ImageConverter(private val activity: ComponentActivity) {
                     ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
                 }
             } catch (e: Exception) {
-                Log.e(tag, "Exif Error! ${e.localizedMessage}: ${e.cause}")
+                Log.e(TAG, "Exif Error! ${e.localizedMessage}: ${e.cause}")
             }
             ins.close()
 
@@ -342,7 +350,7 @@ class ImageConverter(private val activity: ComponentActivity) {
 
     fun getUriForCamera(context: Context) {
         if (!this::cameraResultLauncher.isInitialized) {
-            Log.e(tag, "Must call initialize first!")
+            Log.e(TAG, "Must call initialize first!")
             onUriListener?.onError("Must call initialize first!")
             return
         }
@@ -353,7 +361,7 @@ class ImageConverter(private val activity: ComponentActivity) {
                 val imagePath = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
                 File(imagePath, "JPEG_${timeStamp}" + ".jpg")
             } catch (e: Exception) {
-                Log.e(tag, "file create ERROR! : $e")
+                Log.e(TAG, "file create ERROR! : $e")
                 onUriListener?.onError("file create ERROR! : $e")
                 return
             }
@@ -377,7 +385,7 @@ class ImageConverter(private val activity: ComponentActivity) {
 
     fun getUriForAlbum() {
         if (!this::cameraResultLauncher.isInitialized) {
-            Log.e(tag, "Must call initialize first!")
+            Log.e(TAG, "Must call initialize first!")
             onUriListener?.onError("Must call initialize first!")
             return
         }
