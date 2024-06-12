@@ -8,13 +8,21 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
+import android.graphics.Rect
 import android.media.ExifInterface
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.provider.MediaStore
 import android.util.Base64
+import android.util.DisplayMetrics
 import android.util.Log
+import android.util.Size
+import android.view.PixelCopy
+import android.view.View
+import android.widget.ImageView
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -43,17 +51,10 @@ import java.util.Date
  */
 class ImageConverter(private val activity: ComponentActivity) {
     companion object {
-        private var dirPath = "DCIM/imgConv"
-        private var lastName = "_imgConv"
         private const val TAG = "ImageConverter"
+        private const val defaultDirPath = "DCIM/imgConv"
+        private fun defaultName() = "${System.currentTimeMillis()}_imgConv"
 
-        fun setDirectoryPath(dirPath: String){
-            this.dirPath = dirPath
-        }
-
-        fun setLastName(lastName: String){
-            this.lastName = lastName
-        }
 
         //이미지 JPEG변환 및 최대 해상도, 최대 용량 지정
         fun convertToJpgByteArray(
@@ -168,8 +169,11 @@ class ImageConverter(private val activity: ComponentActivity) {
             return fixRotate(ByteArrayInputStream(byteArray), matrix)
         }
 
-        fun byteArrayEncodeBase64(byteArray: ByteArray): ByteArray = Base64.encode(byteArray, Base64.DEFAULT)
-        fun byteArrayDecodeBase64(byteArray: ByteArray): ByteArray = Base64.decode(byteArray, Base64.DEFAULT)
+        fun byteArrayEncodeBase64(byteArray: ByteArray): ByteArray =
+            Base64.encode(byteArray, Base64.DEFAULT)
+
+        fun byteArrayDecodeBase64(byteArray: ByteArray): ByteArray =
+            Base64.decode(byteArray, Base64.DEFAULT)
 
         //이미지 자동회전 방지 (sdk 24이상부터)
         private fun fixRotate(ins: InputStream, matrix: Matrix): Bitmap {
@@ -204,9 +208,15 @@ class ImageConverter(private val activity: ComponentActivity) {
         }
 
         // 이미지 저장 요청
-        fun imageSaveJPEG(activity: Activity, bitmap: Bitmap, saveQuality: Int): Boolean {
+        fun imageSaveJPEG(
+            activity: Activity,
+            bitmap: Bitmap,
+            saveQuality: Int,
+            dirPathUser: String? = null,
+            fileNameUser: String? = null
+        ): Boolean {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                saveImageOnAboveAndroidQ(activity, bitmap, saveQuality)
+                saveImageOnAboveAndroidQ(activity, bitmap, saveQuality, dirPathUser, fileNameUser)
                 return true
             } else {
                 val writePermission = ActivityCompat.checkSelfPermission(
@@ -215,7 +225,13 @@ class ImageConverter(private val activity: ComponentActivity) {
                 )
 
                 if (writePermission == PackageManager.PERMISSION_GRANTED) {
-                    saveImageOnUnderAndroidQ(activity, bitmap, saveQuality)
+                    saveImageOnUnderAndroidQ(
+                        activity,
+                        bitmap,
+                        saveQuality,
+                        dirPathUser,
+                        fileNameUser
+                    )
                     return true
                 } else {
                     val requestExternalStorageCode = 1
@@ -237,8 +253,15 @@ class ImageConverter(private val activity: ComponentActivity) {
 
         // SDK 29이상 저장시
         @RequiresApi(Build.VERSION_CODES.Q)
-        private fun saveImageOnAboveAndroidQ(activity: Activity, bitmap: Bitmap, saveQuality: Int) {
-            val fileName = System.currentTimeMillis().toString() + lastName + ".jpg"
+        private fun saveImageOnAboveAndroidQ(
+            activity: Activity,
+            bitmap: Bitmap,
+            saveQuality: Int,
+            dirPathUser: String?,
+            fileNameUser: String?
+        ) {
+            val dirPath = dirPathUser ?: defaultDirPath
+            val fileName = fileNameUser ?: (defaultName() + ".jpg")
             val contentValues = ContentValues()
             contentValues.apply {
                 put(MediaStore.Images.Media.RELATIVE_PATH, dirPath)
@@ -275,8 +298,15 @@ class ImageConverter(private val activity: ComponentActivity) {
         }
 
         // SDK 29미만 저장시
-        private fun saveImageOnUnderAndroidQ(activity: Activity, bitmap: Bitmap, saveQuality: Int) {
-            val fileName = System.currentTimeMillis().toString() + lastName + ".jpg"
+        private fun saveImageOnUnderAndroidQ(
+            activity: Activity,
+            bitmap: Bitmap,
+            saveQuality: Int,
+            dirPathUser: String?,
+            fileNameUser: String?
+        ) {
+            val dirPath = dirPathUser ?: defaultDirPath
+            val fileName = fileNameUser ?: (defaultName() + ".jpg")
             val externalStorage = Environment.getExternalStorageDirectory().absolutePath
             val path = "$externalStorage/$dirPath"
             val dir = File(path)
@@ -303,6 +333,67 @@ class ImageConverter(private val activity: ComponentActivity) {
                 e.printStackTrace()
             }
         }
+
+
+        @RequiresApi(Build.VERSION_CODES.O)
+        fun captureFullScreen(activity: Activity, onCaptureListener: OnCaptureListener) {
+            Log.d(TAG, "FullScreen capture start")
+            val size: Size = if (Build.VERSION.SDK_INT >= 30) {
+                val metrics = activity.windowManager.currentWindowMetrics
+                Size(metrics.bounds.width(), metrics.bounds.height())
+            } else {
+                val displayMetrics = DisplayMetrics()
+                activity.windowManager.defaultDisplay.getRealMetrics(displayMetrics)
+                Size(displayMetrics.widthPixels, displayMetrics.heightPixels)
+            }
+
+            val rect = Rect(0, 0, size.width, size.height)
+            startCapture(activity, rect, onCaptureListener)
+        }
+
+        @RequiresApi(Build.VERSION_CODES.O)
+        fun captureFromView(activity: Activity, view: View, onCaptureListener: OnCaptureListener) {
+            Log.d(TAG, "view<${view.id}> capture start")
+            val locationOfViewInWindow = IntArray(2)
+            view.getLocationInWindow(locationOfViewInWindow)
+            val rect = Rect(
+                locationOfViewInWindow[0],
+                locationOfViewInWindow[1],
+                locationOfViewInWindow[0] + view.width,
+                locationOfViewInWindow[1] + view.height,
+            )
+            startCapture(activity, rect, onCaptureListener)
+        }
+
+        @RequiresApi(Build.VERSION_CODES.O)
+        private fun startCapture(
+            activity: Activity,
+            rect: Rect,
+            onCaptureListener: OnCaptureListener
+        ) {
+            val bitmap = Bitmap.createBitmap(rect.width(), rect.height(), Bitmap.Config.ARGB_8888)
+            val listener = PixelCopy.OnPixelCopyFinishedListener { copyResult ->
+                when (copyResult) {
+                    PixelCopy.SUCCESS -> onCaptureListener.onComplete(bitmap)
+                    else -> onCaptureListener.onFailed()
+                }
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                PixelCopy.request(
+                    activity.window,
+                    rect,
+                    bitmap,
+                    listener,
+                    Handler(Looper.getMainLooper())
+                )
+            }
+        }
+    }
+
+    interface OnCaptureListener {
+        fun onComplete(bitmap: Bitmap)
+        fun onFailed()
     }
 
     interface OnUriListener {
