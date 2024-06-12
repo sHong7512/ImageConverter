@@ -261,7 +261,7 @@ class ImageConverter(private val activity: ComponentActivity) {
             fileNameUser: String?
         ) {
             val dirPath = dirPathUser ?: defaultDirPath
-            val fileName = fileNameUser ?: (defaultName() + ".jpg")
+            val fileName = "${fileNameUser ?: defaultName()}.jpg"
             val contentValues = ContentValues()
             contentValues.apply {
                 put(MediaStore.Images.Media.RELATIVE_PATH, dirPath)

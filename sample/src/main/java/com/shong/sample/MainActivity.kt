@@ -1,9 +1,15 @@
 package com.shong.sample
 
+import android.graphics.Bitmap
 import android.net.Uri
+import android.opengl.Visibility
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
+import android.view.View
 import android.widget.Button
 import android.widget.ImageView
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.shong.imageconverter.ImageConverter
 
@@ -45,8 +51,53 @@ class MainActivity : AppCompatActivity() {
                     ImageConverter.imageSaveJPEG(this, bitmap, 100)
                 }
             }
-
         }
+
+        if (Build.VERSION.SDK_INT >= 26) {
+            findViewById<Button>(R.id.captureFullButton).setOnClickListener {
+                ImageConverter.captureFullScreen(this, object : ImageConverter.OnCaptureListener {
+                    override fun onComplete(bitmap: Bitmap) {
+                        ImageConverter.imageSaveJPEG(
+                            activity = this@MainActivity,
+                            bitmap = bitmap,
+                            saveQuality = 100,
+                            dirPathUser = "DCIM/imageConv",
+                            fileNameUser = "imageConv_${System.currentTimeMillis()}"
+                        )
+                    }
+
+                    override fun onFailed() {
+                        Log.d("example", "error!")
+                    }
+                })
+            }
+
+            findViewById<Button>(R.id.captureImageButton).setOnClickListener {
+                val imageView = findViewById<ImageView>(R.id.imageView)
+                ImageConverter.captureFromView(
+                    this,
+                    imageView,
+                    object : ImageConverter.OnCaptureListener {
+                        override fun onComplete(bitmap: Bitmap) {
+                            ImageConverter.imageSaveJPEG(
+                                activity = this@MainActivity,
+                                bitmap = bitmap,
+                                saveQuality = 100,
+                                dirPathUser = "DCIM/imageConv",
+                                fileNameUser = "imageConv_${System.currentTimeMillis()}"
+                            )
+                        }
+
+                        override fun onFailed() {
+                            Log.d("example", "error!")
+                        }
+                    })
+            }
+        } else {
+            findViewById<Button>(R.id.captureFullButton).visibility = View.GONE
+            findViewById<Button>(R.id.captureImageButton).visibility = View.GONE
+        }
+
     }
 
 }
