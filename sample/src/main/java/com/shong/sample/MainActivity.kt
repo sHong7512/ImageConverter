@@ -2,18 +2,15 @@ package com.shong.sample
 
 import android.graphics.Bitmap
 import android.net.Uri
-import android.opengl.Visibility
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.ImageView
-import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.shong.imageconverter.ImageConverter
 
-// TODO: 설명, 예제 업로드하자
 class MainActivity : AppCompatActivity() {
     private var currentUri: Uri? = null;
     override fun onCreate(savedInstanceState: Bundle?) {

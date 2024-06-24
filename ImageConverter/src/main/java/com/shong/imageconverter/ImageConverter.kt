@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
 import android.graphics.Matrix
 import android.graphics.Rect
 import android.media.ExifInterface
@@ -22,7 +23,6 @@ import android.util.Log
 import android.util.Size
 import android.view.PixelCopy
 import android.view.View
-import android.widget.ImageView
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -334,8 +334,6 @@ class ImageConverter(private val activity: ComponentActivity) {
             }
         }
 
-
-        @RequiresApi(Build.VERSION_CODES.O)
         fun captureFullScreen(activity: Activity, onCaptureListener: OnCaptureListener) {
             Log.d(TAG, "FullScreen capture start")
             val size: Size = if (Build.VERSION.SDK_INT >= 30) {
@@ -351,7 +349,6 @@ class ImageConverter(private val activity: ComponentActivity) {
             startCapture(activity, rect, onCaptureListener)
         }
 
-        @RequiresApi(Build.VERSION_CODES.O)
         fun captureFromView(activity: Activity, view: View, onCaptureListener: OnCaptureListener) {
             Log.d(TAG, "view<${view.id}> capture start")
             val locationOfViewInWindow = IntArray(2)
@@ -365,21 +362,21 @@ class ImageConverter(private val activity: ComponentActivity) {
             startCapture(activity, rect, onCaptureListener)
         }
 
-        @RequiresApi(Build.VERSION_CODES.O)
         private fun startCapture(
             activity: Activity,
             rect: Rect,
             onCaptureListener: OnCaptureListener
         ) {
             val bitmap = Bitmap.createBitmap(rect.width(), rect.height(), Bitmap.Config.ARGB_8888)
-            val listener = PixelCopy.OnPixelCopyFinishedListener { copyResult ->
-                when (copyResult) {
-                    PixelCopy.SUCCESS -> onCaptureListener.onComplete(bitmap)
-                    else -> onCaptureListener.onFailed()
-                }
-            }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val listener = PixelCopy.OnPixelCopyFinishedListener { copyResult ->
+                    when (copyResult) {
+                        PixelCopy.SUCCESS -> onCaptureListener.onComplete(bitmap)
+                        else -> onCaptureListener.onFailed()
+                    }
+                }
+
                 PixelCopy.request(
                     activity.window,
                     rect,
@@ -387,6 +384,14 @@ class ImageConverter(private val activity: ComponentActivity) {
                     listener,
                     Handler(Looper.getMainLooper())
                 )
+            } else {
+                // TODO:: 확인 필요
+                val canvas = Canvas(bitmap)
+                val view: View = activity.window.decorView.rootView
+                view.draw(canvas)
+                canvas.setBitmap(null)
+
+                onCaptureListener.onComplete(bitmap)
             }
         }
     }
